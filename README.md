@@ -1,0 +1,1 @@
+# Crear el .env y usar credenciales propias
