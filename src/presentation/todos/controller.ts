@@ -1,88 +1,65 @@
 import { prisma } from '../../data/postgres';
 import { Request, Response } from "express";
 import { CreateTodoDTO, UpdateTodoDTO } from '../../domain/dtos';
+import { CreateTodo, DeleteTodo, GetTodo, GetTodos, TodoRepository, UpdateTodo } from '../../domain';
 
 export class TodosController {
 
 
-    constructor(){}
+    constructor(
+        private readonly todoRepository: TodoRepository
+    ){}
 
 
-    public getTodos = async( req: Request , res: Response) => {
+    public getTodos = ( req: Request , res: Response) => {
+    
+        new GetTodos( this.todoRepository )
+            .execute()
+            .then( todos => res.json(todos))
+            .catch( error => res.status(400).json({error}));
+    };
 
-        const todos = await prisma.todo.findMany();
-        return res.json(todos);
-
-    }
-
-    public getTodoById = async( req: Request , res: Response) => {
+    public getTodoById = ( req: Request , res: Response) => {
         const id  = Number(req.params.id);
-        if(isNaN(id)) return res.status(400).json({ error: 'El argumento ID no es un numero'})
-
-        const todo = await prisma.todo.findFirst({
-            where: { id }
-        });
-
-
-        (todo) ? res.status(200).json(todo) : res.status(404).json({ error: `Todo no se consigue con el id: ${id}` });
-
-    }
-
-
-    public createTodo = async( req: Request , res: Response) => {
-        const [error, createTodoDTO] = CreateTodoDTO.create(req.body);
-
-        if(error) return res.status(400).json({error});
-
-        const todo = await prisma.todo.create({
-            data: createTodoDTO!
-        });
-
-        res.json(todo);
-
-    }
-
-    public updateTodo = async( req: Request , res: Response) => {
-        const id  = Number(req.params.id);
-        const [error , updateTodoDTO ] = UpdateTodoDTO.create({ ...req.body , id})
-
-        if(error) return res.status(400).json({error});
-
-        const todo = await prisma.todo.findFirst({
-            where: { id }
-        });
-
-        if( !todo ) return res.status(404).json({ error: `El ID ${id} no existe`});
-
-
-        const updatedTodo = await prisma.todo.update({
-            where: { id },
-            data: updateTodoDTO!.values
-        })
-
-        res.json(updatedTodo);
-
-    }
-
-    public deleteTodo = async( req: Request , res: Response) => {
-        const id  = Number(req.params.id);
-        if(isNaN(id)) return res.status(400).json({ error: 'El argumento ID no es un numero'});
-
-        const todo = await prisma.todo.findFirst({
-            where: { id }
-        });        
         
-        if( !todo ) return res.status(404).json({ error: `El ID ${id} no existe`});
+        new GetTodo( this.todoRepository)
+            .execute(id)
+            .then( todo => res.json(todo))
+            .catch( error => res.status(400).json({error}));
+    };
 
-        const deleted = await prisma.todo.delete({
-            where: {id}
-        });
 
-        ( deleted )
-            ? res.json(deleted)
-            : res.status(400).json({ error: `el Id ${id} no existe` })
+    public createTodo = ( req: Request , res: Response) => {
+        const [error, createTodoDto] = CreateTodoDTO.create(req.body);
 
-    }
+        if(error) return res.status(400).json({error});
+
+        new CreateTodo( this.todoRepository )
+            .execute( createTodoDto! )
+            .then( todo => res.json(todo))
+            .catch( error => res.status(400).json({error}))
+    };
+
+    public updateTodo = ( req: Request , res: Response) => {
+        const id  = Number(req.params.id);
+        const [error , updateTodoDto ] = UpdateTodoDTO.create({ ...req.body , id})
+
+        if(error) return res.status(400).json({error});
+
+        new UpdateTodo( this.todoRepository )
+            .execute( updateTodoDto! )
+            .then(todo => res.json(todo))
+            .catch(error => res.status(400).json({error}));
+    };
+
+    public deleteTodo = ( req: Request , res: Response) => {
+        const id  = Number(req.params.id);
+
+        new DeleteTodo( this.todoRepository )
+            .execute(id)
+            .then( todo => res.json(todo) )
+            .catch( error => res.status(400).json({error}) )
+    };
 
 
 }
